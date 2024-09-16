@@ -15,7 +15,7 @@ use pac::pio::vals::SmExecctrlStatusSel;
 use pio::{Program, SideSet, Wrap};
 
 use crate::dma::{Channel, Transfer, Word};
-use crate::gpio::{self, AnyPin, Drive, Level, Pull, SealedPin, SlewRate};
+use crate::gpio::{self, AnyPin, Drive, GpioOver, Level, Pull, SealedPin, SlewRate};
 use crate::interrupt::typelevel::{Binding, Handler, Interrupt};
 use crate::pac::dma::vals::TreqSel;
 use crate::relocate::RelocatedProgram;
@@ -263,6 +263,58 @@ impl<'l, PIO: Instance> Pin<'l, PIO> {
     pub fn set_schmitt(&mut self, enable: bool) {
         self.pin.pad_ctrl().modify(|w| {
             w.set_schmitt(enable);
+        });
+    }
+
+    /// Set whether the pin's IRQ should be overridden
+    #[inline]
+    pub fn set_irq_override(&mut self, over: GpioOver) {
+        self.pin.gpio().ctrl().modify(|w| {
+            w.set_irqover(match over {
+                GpioOver::Normal => pac::io::vals::Irqover::NORMAL,
+                GpioOver::Invert => pac::io::vals::Irqover::INVERT,
+                GpioOver::Low => pac::io::vals::Irqover::LOW,
+                GpioOver::High => pac::io::vals::Irqover::HIGH,
+            })
+        });
+    }
+
+    /// Set whether the pin input should be overridden
+    #[inline]
+    pub fn set_input_override(&mut self, over: GpioOver) {
+        self.pin.gpio().ctrl().modify(|w| {
+            w.set_inover(match over {
+                GpioOver::Normal => pac::io::vals::Inover::NORMAL,
+                GpioOver::Invert => pac::io::vals::Inover::INVERT,
+                GpioOver::Low => pac::io::vals::Inover::LOW,
+                GpioOver::High => pac::io::vals::Inover::HIGH,
+            })
+        });
+    }
+
+    /// Set whether the pin output should be overridden
+    #[inline]
+    pub fn set_output_override(&mut self, over: GpioOver) {
+        self.pin.gpio().ctrl().modify(|w| {
+            w.set_outover(match over {
+                GpioOver::Normal => pac::io::vals::Outover::NORMAL,
+                GpioOver::Invert => pac::io::vals::Outover::INVERT,
+                GpioOver::Low => pac::io::vals::Outover::LOW,
+                GpioOver::High => pac::io::vals::Outover::HIGH,
+            })
+        });
+    }
+
+    /// Set whether the pin output enable be overridden
+    #[inline]
+    pub fn set_output_enable_override(&mut self, over: GpioOver) {
+        self.pin.gpio().ctrl().modify(|w| {
+            w.set_oeover(match over {
+                GpioOver::Normal => pac::io::vals::Oeover::NORMAL,
+                GpioOver::Invert => pac::io::vals::Oeover::INVERT,
+                GpioOver::Low => pac::io::vals::Oeover::DISABLE,
+                GpioOver::High => pac::io::vals::Oeover::ENABLE,
+            })
         });
     }
 

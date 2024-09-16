@@ -80,6 +80,19 @@ pub enum SlewRate {
     Slow,
 }
 
+/// GPIO overrides
+#[derive(Debug, Eq, PartialEq)]
+pub enum GpioOver {
+    /// Normal behavior as selected by Funcsel / Normal Interrupt values
+    Normal,
+    /// Inverted behaviour
+    Invert,
+    /// Always drive low / disabled
+    Low,
+    /// Always drive high / enabled
+    High,
+}
+
 /// A GPIO bank with up to 32 pins.
 #[derive(Debug, Eq, PartialEq)]
 pub enum Bank {
@@ -123,6 +136,12 @@ impl<'d> Input<'d> {
     #[inline]
     pub fn set_schmitt(&mut self, enable: bool) {
         self.pin.set_schmitt(enable)
+    }
+
+    /// Set whether the input should be overridden
+    #[inline]
+    pub fn set_input_override(&mut self, over: GpioOver) {
+        self.pin.set_input_override(over)
     }
 
     /// Get whether the pin input level is high.
@@ -372,6 +391,12 @@ impl<'d> Output<'d> {
         self.pin.set_slew_rate(slew_rate)
     }
 
+    /// Set whether the output should be overridden
+    #[inline]
+    pub fn set_output_override(&mut self, over: GpioOver) {
+        self.pin.set_output_override(over);
+    }
+
     /// Set the output as high.
     #[inline]
     pub fn set_high(&mut self) {
@@ -619,6 +644,54 @@ impl<'d> Flex<'d> {
         });
     }
 
+    /// Set whether the pin's IRQ should be overridden
+    pub fn set_irq_override(&mut self, over: GpioOver) {
+        self.pin.gpio().ctrl().modify(|w| {
+            w.set_irqover(match over {
+                GpioOver::Normal => pac::io::vals::Irqover::NORMAL,
+                GpioOver::Invert => pac::io::vals::Irqover::INVERT,
+                GpioOver::Low => pac::io::vals::Irqover::LOW,
+                GpioOver::High => pac::io::vals::Irqover::HIGH,
+            })
+        });
+    }
+
+    /// Set whether the pin input should be overridden
+    pub fn set_input_override(&mut self, over: GpioOver) {
+        self.pin.gpio().ctrl().modify(|w| {
+            w.set_inover(match over {
+                GpioOver::Normal => pac::io::vals::Inover::NORMAL,
+                GpioOver::Invert => pac::io::vals::Inover::INVERT,
+                GpioOver::Low => pac::io::vals::Inover::LOW,
+                GpioOver::High => pac::io::vals::Inover::HIGH,
+            })
+        });
+    }
+
+    /// Set whether the pin output should be overridden
+    pub fn set_output_override(&mut self, over: GpioOver) {
+        self.pin.gpio().ctrl().modify(|w| {
+            w.set_outover(match over {
+                GpioOver::Normal => pac::io::vals::Outover::NORMAL,
+                GpioOver::Invert => pac::io::vals::Outover::INVERT,
+                GpioOver::Low => pac::io::vals::Outover::LOW,
+                GpioOver::High => pac::io::vals::Outover::HIGH,
+            })
+        });
+    }
+
+    /// Set whether the pin output enable be overridden
+    pub fn set_output_enable_override(&mut self, over: GpioOver) {
+        self.pin.gpio().ctrl().modify(|w| {
+            w.set_oeover(match over {
+                GpioOver::Normal => pac::io::vals::Oeover::NORMAL,
+                GpioOver::Invert => pac::io::vals::Oeover::INVERT,
+                GpioOver::Low => pac::io::vals::Oeover::DISABLE,
+                GpioOver::High => pac::io::vals::Oeover::ENABLE,
+            })
+        });
+    }
+
     /// Put the pin into input mode.
     ///
     /// The pull setting is left unchanged.
@@ -768,6 +841,10 @@ impl<'d> Drop for Flex<'d> {
         let idx = self.pin._pin() as usize;
         self.pin.pad_ctrl().write(|_| {});
         self.pin.gpio().ctrl().write(|w| {
+            w.set_irqover(pac::io::vals::Irqover::NORMAL);
+            w.set_inover(pac::io::vals::Inover::NORMAL);
+            w.set_oeover(pac::io::vals::Oeover::NORMAL);
+            w.set_outover(pac::io::vals::Outover::NORMAL);
             w.set_funcsel(pac::io::vals::Gpio0ctrlFuncsel::NULL as _);
         });
         self.pin.io().int_dormant_wake().inte(idx / 8).write_clear(|w| {
