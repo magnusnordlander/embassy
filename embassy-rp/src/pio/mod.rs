@@ -1203,7 +1203,13 @@ fn on_pio_drop<PIO: Instance>() {
         // we only have 30 pins. don't test the other two since gpio() asserts.
         for i in 0..30 {
             if used_pins & (1 << i) != 0 {
-                pac::IO_BANK0.gpio(i).ctrl().write(|w| w.set_funcsel(null));
+                pac::IO_BANK0.gpio(i).ctrl().write(|w| {
+                    w.set_outover(pac::io::vals::Outover::NORMAL);
+                    w.set_inover(pac::io::vals::Inover::NORMAL);
+                    w.set_irqover(pac::io::vals::Irqover::NORMAL);
+                    w.set_oeover(pac::io::vals::Oeover::NORMAL);
+                    w.set_funcsel(null);
+                });
             }
         }
     }
